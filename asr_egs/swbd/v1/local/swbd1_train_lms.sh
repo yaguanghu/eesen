@@ -99,48 +99,6 @@ ngram -unk -lm $dir/sw1.o4g.kn.gz -ppl $dir/heldout -debug 2 >& $dir/4gram.ppl2
 # file data/local/lm/heldout: 10000 sentences, 118254 words, 0 OOVs
 # 0 zeroprobs, logprob= -253747 ppl= 95.1632 ppl1= 139.887
 
-mkdir -p $dir/fisher
-rm -rf $dir/fisher/text0
-for x in ${fisher_dirs[@]}; do
-    if [ -d $x/data/trans ]; then
-      cat $x/data/trans/*/*.txt |  grep -v ^# | grep -v ^$ | cut -d' ' -f4- >> $dir/fisher/text0
-    elif [ -d $x/DATA/TRANS ]; then
-      cat $x/DATA/TRANS/*/*.TXT | grep -v ^# | grep -v ^$ | cut -d' ' -f4- >> $dir/fisher/text0
-    else
-      echo "$0: Cannot find transcripts in Fisher directory $x" && exit 1;
-    fi
-done
-
-if [ -f $dir/fisher/text0 ]; then
-  cat $dir/fisher/text0 | local/fisher_map_words.pl \
-    | gzip -c > $dir/fisher/text1.gz
-
-  for x in 3 4; do
-    ngram-count -text $dir/fisher/text1.gz -order $x -limit-vocab \
-      -vocab $dir/wordlist -unk -map-unk "<unk>" -kndiscount -interpolate \
-      -lm $dir/fisher/fisher.o${x}g.kn.gz
-    echo "PPL for Fisher ${x}gram LM:"
-    ngram -unk -lm $dir/fisher/fisher.o${x}g.kn.gz -ppl $dir/heldout
-    ngram -unk -lm $dir/fisher/fisher.o${x}g.kn.gz -ppl $dir/heldout -debug 2 \
-      >& $dir/fisher/${x}gram.ppl2
-    compute-best-mix $dir/${x}gram.ppl2 \
-      $dir/fisher/${x}gram.ppl2 >& $dir/sw1_fsh_mix.${x}gram.log
-    grep 'best lambda' $dir/sw1_fsh_mix.${x}gram.log | perl -e '
-      $_=<>;
-      s/.*\(//; s/\).*//;
-      @A = split;
-      die "Expecting 2 numbers; found: $_" if(@A!=2);
-      print "$A[0]\n$A[1]\n";' > $dir/sw1_fsh_mix.${x}gram.weights
-    swb1_weight=$(head -1 $dir/sw1_fsh_mix.${x}gram.weights)
-    fisher_weight=$(tail -n 1 $dir/sw1_fsh_mix.${x}gram.weights)
-    ngram -order $x -lm $dir/sw1.o${x}g.kn.gz -lambda $swb1_weight \
-      -mix-lm $dir/fisher/fisher.o${x}g.kn.gz \
-      -unk -write-lm $dir/sw1_fsh.o${x}g.kn.gz
-    echo "PPL for SWBD1 + Fisher ${x}gram LM:"
-    ngram -unk -lm $dir/sw1_fsh.o${x}g.kn.gz -ppl $dir/heldout
-  done
-fi
-
 if [ ! -z "$weblm" ]; then
   echo "Interpolating web-LM not implemented yet"
 fi

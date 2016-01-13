@@ -57,7 +57,7 @@ thread_string=
 [ -z "$norm_vars" ] && norm_vars=`cat $srcdir/norm_vars 2>/dev/null`
 
 mkdir -p $dir/log
-split_data.sh $data $nj || exit 1;
+split_data.sh --per-utt $data $nj || exit 1;
 echo $nj > $dir/num_jobs
 
 # Check if necessary files exist.
@@ -85,7 +85,7 @@ if ! $skip_scoring ; then
     local/score_sclite.sh $scoring_opts --cmd "$cmd" $data $graphdir $dir || exit 1;
   else
     [ ! -x local/score.sh ] && echo "Not scoring because local/score.sh does not exist or not executable." && exit 1;
-    local/score.sh $scoring_opts --cmd "$cmd" $data $graphdir $dir || exit 1;
+    local/score.sh --cmd "$cmd" $data $graphdir $dir || exit 1;
   fi
 fi
 
